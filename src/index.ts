@@ -41,16 +41,45 @@ const notes: { [id: string]: Note } = {
 const server = new Server(
   {
     name: "flomo-mcp",
-    version: "0.1.0",
+    version: "0.0.1",
   },
   {
     capabilities: {
       tools: {},
-      // resources: {},
-      // prompts: {},
+      resources: {},
+      prompts: {},
     },
   }
 );
+
+server.setRequestHandler(ListResourcesRequestSchema, async () => {
+  const cities = listCity();
+  return {
+    resources: cities.map(city => ({
+      name: city.name,
+      description: city.name,
+      uri: `city://${city.adcode}`,
+      mimeType: "text/plain",
+    })),
+  };
+});
+
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  const adcode = request.params.uri.split("://")[1];
+  const city = getCity(adcode);
+  if (!city) {
+    throw new Error("City not found");
+  }
+  return {
+    contents: [{
+      uri: "city://" + city.adcode,
+      mimeType: "text/plain",
+      text: "city: " + city.name + " adcode: " + city.adcode,
+    }]
+  };
+});
+
 
 
 /**
@@ -79,6 +108,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 import { FlomoClient } from "./flomo.js"
+import { getCity, listCity } from "./gaode.js";
 
 /**
  * Handler for the create_note tool.

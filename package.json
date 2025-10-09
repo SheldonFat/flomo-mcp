@@ -1,8 +1,9 @@
 {
-  "name": "flomo-mcp",
-  "version": "0.1.0",
+  "name": "@panghui8383/flomo-mcp",
+  "homepage": "https://github.com/SheldonFat/flomo-mcp",
+  "version": "0.0.5",
   "description": "A Model Context Protocol server",
-  "private": true,
+  "private": false,
   "type": "module",
   "bin": {
     "flomo-mcp": "./build/index.js"
