@@ -45,12 +45,65 @@ const server = new Server(
   },
   {
     capabilities: {
-      tools: {},
-      resources: {},
-      prompts: {},
+      tools: {
+        "listChanged": true
+      },
+      resources: {
+        "listChanged": true
+      },
+      prompts: {
+        "listChanged": true
+      },
     },
   }
 );
+
+
+server.setRequestHandler(ListPromptsRequestSchema, async () => {
+  return {
+    prompts: [
+      {
+        name: "summarize_weather",
+        description: "summarize weather",
+        arguments: [{
+          name: "weather",
+          description: "Weather report in JSON format",
+          required: true
+        }]
+      }
+    ]
+  };
+});
+
+
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+  
+  // 根据 prompt 名称返回相应的消息模板
+  if (name === "summarize_weather") {
+    const weather = args?.weather;
+    
+    if (!weather) {
+      throw new Error("Weather argument is required");
+    }
+    
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: `Please summarize the following weather report:\n\n${JSON.stringify(weather, null, 2)}\n\n
+            Provide a concise, human-readable summary including temperature, conditions, and any important weather information.
+            And answer in Chinese.`
+          }
+        }
+      ]
+    };
+  }
+  
+  throw new Error(`Unknown prompt: ${name}`);
+});
 
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
   const cities = listCity();
@@ -90,6 +143,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
+        name: "get_weather",
+        description: "get weather by adcode",
+        inputSchema: {
+          type: "object",
+          properties: {
+            adcode: {
+              type: "string",
+              description: "Adcode of the city"
+            }
+          },
+          required: ["adcode"]
+        }
+      },
+      {
         name: "write_note",
         description: "write note to flomo",
         inputSchema: {
@@ -108,7 +175,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 });
 
 import { FlomoClient } from "./flomo.js"
-import { getCity, listCity } from "./gaode.js";
+import { getCity, getWeather, listCity } from "./gaode.js";
 
 /**
  * Handler for the create_note tool.
@@ -116,6 +183,20 @@ import { getCity, listCity } from "./gaode.js";
  */
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
+    case "get_weather": {
+      const adcode = String(request.params.arguments?.adcode);
+      if (!adcode) {
+        throw new Error("Adcode is required");
+      }
+      const weather = await getWeather(adcode);
+      return {
+        content: [{
+          type: "application/json",
+          data: weather
+        }]
+      };
+    }
+
     case "write_note": {
 
       if (!apiUrl) {
